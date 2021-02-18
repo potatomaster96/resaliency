@@ -1,6 +1,8 @@
 ## Aesthetic Driven Saliency Retargeting and Color Enhancement Network
+
 Some brief description about the project. Implemented in Tensorflow.
-&nbsp;
+
+<pre></pre>
 ### This repo contains the following files
 | Files                                     | Description | 
 | ------                                    | ------                                             | 
@@ -12,7 +14,7 @@ Some brief description about the project. Implemented in Tensorflow.
 | train&#46;py                              | Script to start or resume training                 | 
 | utils&#46;py                              | Contains image loading and augmentation operations | 
 | weights_mobilenet_aesthetic_0.07&#46;hdf5 | Weights for MobileNet NIMA model (aesthetics)      | 
-
+#
 ### Get the dataset
 Get the dataset from the link below, and extract the contents in the root directory of this project:
 ```sh
