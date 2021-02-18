@@ -1,8 +1,7 @@
 ## Aesthetic Driven Saliency Retargeting and Color Enhancement Network
 
-Some brief description about the project. Implemented in Tensorflow.
+<pre>Some brief description about the project. Implemented in Tensorflow.</pre>
 
-<pre></pre>
 ### This repo contains the following files
 | Files                                     | Description | 
 | ------                                    | ------                                             | 
