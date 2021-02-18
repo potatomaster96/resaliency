@@ -30,7 +30,7 @@ args = parser.parse_args()
 my_devices = tf.config.experimental.list_physical_devices(device_type='GPU')
 print("Available GPU Devices:", len(my_devices))
 if len(my_devices) != 0:
-    gpu = my_devices[0] # default to 1st gpu
+    gpu = my_devices[1] # default to 1st gpu
     tf.config.experimental.set_visible_devices(devices=gpu, device_type='GPU')
     tf.config.experimental.set_memory_growth(gpu, True)
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
@@ -55,11 +55,11 @@ ckpt_dir           = args.ckpt_dir
 
 # weights parameters
 loss_weights = {
-    "gen_adv"       : 0.0, # 0.5
+    "gen_adv"       : 1.0, # 0.5
     "perceptual"    : 1.0, # 5.0
-    "saliency"      : 0.0, # 2.0
+    "saliency"      : 1.0, # 2.0
     "hue"           : 0.0, # 5.0
-    "aesthetics"    : 10.0,
+    "aesthetics"    : 2.0,
     "discriminator" : 1.0
 }
 
@@ -70,7 +70,8 @@ train_saliency_map = glob.glob('SAM_dataset/guide_sal/*')
 real_image         = glob.glob('SAM_dataset/resize_beauty/train/*')
 ori_sal_path       = 'SAM_dataset/ori_sal/*'
 checkpoint_dir     = "checkpoints/"
-
+train_sr_data.sort()
+train_saliency_map.sort()
 # ======================================
 # Set up training parameters
 tf.random.set_seed(3) # 3324
@@ -81,8 +82,8 @@ writer = tf.summary.create_file_writer(writer_path)
 
 # ==================================================================================
 # Selecting images for training
-train_src = train_sr_data[:1000]
-train_ref = train_saliency_map[:1000]
+train_src = train_sr_data[:4000]
+train_ref = train_saliency_map[:4000]
 
 # Load images from path
 print("Loading training images")
@@ -169,7 +170,31 @@ def train_step_3(input_images, guiding_sal, step=0):
     return loss
 
 # ==================================================================================
+# get testing image
+# generate random integer values
+from random import seed
+from random import randint
+# seed random number generator
+seed(1)
+testOriImg = glob.glob("SAM_dataset/testDataset/ori_img/*") #768,576 512,392
+testGuidingSal = "SAM_dataset/testDataset/guiding_sal/"
+test_showcase = []
+for index,test in enumerate(testOriImg):
+    ori_img = cv2.imread(test)
+    ori_size = (ori_img.shape[1],ori_img.shape[0])
+    ori_img = cv2.cvtColor(ori_img, cv2.COLOR_BGR2RGB)/255.
+    ori_img = cv2.resize(ori_img,(256,192))
+    ori_img = np.expand_dims(ori_img,0)
+    name = test.split("/")[-1].split('\\')[-1]
+    guiding_sal = cv2.imread(testGuidingSal+name)
+    # guiding_sal = cv2.cvtColor(guiding_sal, cv2.COLOR_BGR2GRAY)/255.
+    guiding_sal = cv2.resize(guiding_sal,(256,192))/255.
+    # guiding_sal = np.expand_dims(guiding_sal,2)
+    guiding_sal = np.expand_dims(guiding_sal,0)
+    test_showcase.append([ori_img,guiding_sal])
 # begin training
+
+# ==================================================================================
 with writer.as_default():
     for i in tqdm(range(epochs)):
         input_images, guiding_sal = next(train_iter)
@@ -189,6 +214,12 @@ with writer.as_default():
         if (i+1) % eval_rate == 0:
             print('Writing example images...')
             input_images, guiding_sal = next(train_iter)
+            # print(input_images.shape)
+            # print(guiding_sal.shape)
+            random_num = randint(0,50)
+            print(test_showcase[random_num][0].shape)
+            print(test_showcase[random_num][1].shape)
+            input_images,guiding_sal = test_showcase[random_num][0],test_showcase[random_num][1]
             outputs = model(input_images, guiding_sal)
             with tf.name_scope("Inputs") as scope:
                 tf.summary.image("Input Images", input_images, step=i)
