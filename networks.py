@@ -79,10 +79,13 @@ class DSRNetwork(tf.keras.Model):
     def aesthetics(self, c_pred):
         mobileNet_input = tf.keras.applications.mobilenet.preprocess_input(c_pred)
         nima_output = self.nima(tf.image.resize(mobileNet_input,(224,224)))
-        sigmoid_output = tf.keras.layers.Dense(units=10, activation='sigmoid')(nima_output)
-        nima_score = tf.reduce_mean(sigmoid_output)
-        perfect_score = 1.0
-        loss = tf.reduce_mean(tf.square(nima_score - perfect_score))
+        # sigmoid_output = tf.keras.layers.Dense(units=10, activation='sigmoid')(nima_output)
+        # nima_score = tf.reduce_mean(sigmoid_output)
+        # perfect_score = 1.0
+        # loss = tf.reduce_mean(tf.square(nima_score - perfect_score))
+        normalized = nima_output/tf.reduce_sum(nima_output)
+        aesthetic_score = tf.reduce_sum(normalized*tf.range(1.0,11.0))/10
+        aesthetic_loss = tf.square(1 - aesthetic_score) * params['aesthetic_loss_weight']
         return loss
 
     def call(self, inputs, guiding_sal, **kwargs):
