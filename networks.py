@@ -85,7 +85,7 @@ class DSRNetwork(tf.keras.Model):
         # loss = tf.reduce_mean(tf.square(nima_score - perfect_score))
         normalized = nima_output/tf.reduce_sum(nima_output)
         aesthetic_score = tf.reduce_sum(normalized*tf.range(1.0,11.0))/10
-        aesthetic_loss = tf.square(1 - aesthetic_score) * params['aesthetic_loss_weight']
+        loss = tf.square(1 - aesthetic_score)
         return loss
 
     def call(self, inputs, guiding_sal, **kwargs):
