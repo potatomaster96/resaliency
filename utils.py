@@ -1,14 +1,15 @@
 import tensorflow as tf
 import numpy as np
 import math
+import os
 
 
 # read images
-def read_image(img_path, size=256):
+def read_image(img_path, size=(256,256)):
     if size is None:
         img = tf.keras.preprocessing.image.load_img(img_path)
     else:
-        img = tf.keras.preprocessing.image.load_img(img_path, target_size=(size,size))
+        img = tf.keras.preprocessing.image.load_img(img_path, target_size=size)
     img = tf.keras.preprocessing.image.img_to_array(img , dtype='float32')
     img = img / 255.0
     return img
@@ -63,6 +64,11 @@ def coral(src, dst):
     ))
     src_flat_transfer = src_flat_norm_transfer * dst_flat_std + dst_flat_mean
     return src_flat_transfer.reshape(src.shape)
+
+
+# return name from path
+def get_name(path):
+    return (path.split(os.sep)[-1]).split(".")[0]
 
 
 def _mat_sqrt(m):

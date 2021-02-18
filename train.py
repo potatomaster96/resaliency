@@ -1,14 +1,14 @@
 import os
 import cv2
 import glob
-import random
 import argparse
 import numpy as np
 from tqdm import tqdm
+from random import seed, randint
 
 import tensorflow as tf
 
-from utils import read_image
+from utils import read_image, get_name
 from networks import DSRNetwork
 
 # ======================================
@@ -30,7 +30,7 @@ args = parser.parse_args()
 my_devices = tf.config.experimental.list_physical_devices(device_type='GPU')
 print("Available GPU Devices:", len(my_devices))
 if len(my_devices) != 0:
-    gpu = my_devices[1] # default to 1st gpu
+    gpu = my_devices[-1] # default to last gpu
     tf.config.experimental.set_visible_devices(devices=gpu, device_type='GPU')
     tf.config.experimental.set_memory_growth(gpu, True)
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
@@ -68,10 +68,13 @@ loss_weights = {
 train_sr_data      = glob.glob('SAM_dataset/img_resize/*')
 train_saliency_map = glob.glob('SAM_dataset/guide_sal/*')
 real_image         = glob.glob('SAM_dataset/resize_beauty/train/*')
+test_sr_data       = "SAM_dataset/testDataset/ori_img" #768,576 512,392
+test_saliency_map  = "SAM_dataset/testDataset/guiding_sal"
 ori_sal_path       = 'SAM_dataset/ori_sal/*'
 checkpoint_dir     = "checkpoints/"
 train_sr_data.sort()
 train_saliency_map.sort()
+
 # ======================================
 # Set up training parameters
 tf.random.set_seed(3) # 3324
@@ -81,21 +84,51 @@ if not os.path.exists(writer_path): os.makedirs(writer_path)
 writer = tf.summary.create_file_writer(writer_path)
 
 # ==================================================================================
-# Selecting images for training
+# get testing image
+# generate random integer values
+seed(1) # seed random number generator
+testOriImg     = [get_name(path) for path in glob.glob("%s/*"%test_sr_data)] #768,576 512,392
+testGuidingSal = [get_name(path) for path in glob.glob("%s/*"%test_saliency_map)]
+matches = list(set(testOriImg) & set(testGuidingSal))
+
+# test_showcase = []
+# for index,test in enumerate(testOriImg):
+#     ori_img = cv2.imread(test)
+#     ori_size = (ori_img.shape[1],ori_img.shape[0])
+#     ori_img = cv2.cvtColor(ori_img, cv2.COLOR_BGR2RGB)/255.
+#     ori_img = cv2.resize(ori_img,(256,192))
+#     ori_img = np.expand_dims(ori_img,0)
+#     name = test.split("/")[-1].split('\\')[-1]
+#     guiding_sal = cv2.imread(testGuidingSal+name)
+#     # guiding_sal = cv2.cvtColor(guiding_sal, cv2.COLOR_BGR2GRAY)/255.
+#     guiding_sal = cv2.resize(guiding_sal,(256,192))/255.
+#     # guiding_sal = np.expand_dims(guiding_sal,2)
+#     guiding_sal = np.expand_dims(guiding_sal,0)
+#     test_showcase.append([ori_img,guiding_sal])
+
+# ==================================================================================
+# Selecting images for training and testing
 train_src = train_sr_data[:4000]
 train_ref = train_saliency_map[:4000]
+test_src  = ["%s/%s.jpg"%(test_sr_data, path) for path in matches]
+test_ref  = ["%s/%s.jpg"%(test_saliency_map, path) for path in matches]
 
 # Load images from path
 print("Loading training images")
 training_src = [read_image(img_path, patch_size) for img_path in tqdm(train_src)]
 training_ref = [read_image(img_path, patch_size) for img_path in tqdm(train_ref)]
+testing_src  = [read_image(img_path, (256,192)) for img_path in tqdm(test_src)]
+testing_ref  = [read_image(img_path, (256,192)) for img_path in tqdm(test_ref)]
 
 # convert image lists to numpy arrays
 training_src = np.asarray(training_src)
 training_ref = np.asarray(training_ref)
+testing_src  = np.asarray(testing_src)
+testing_ref  = np.asarray(testing_ref)
 
 # Convert to tf dataset
 tf_train_data = tf.data.Dataset.from_tensor_slices((training_src, training_ref))
+tf_test_data  = tf.data.Dataset.from_tensor_slices((testing_src, testing_ref))
 
 # ==================================================================================
 # optimizers
@@ -118,7 +151,9 @@ optimizer_disc = tf.keras.optimizers.Adam(learning_rate=lr_schedule_disc)
 # ==================================================================================
 # set up training data iteration
 tf_train_data = tf_train_data.repeat().shuffle(30).batch(batch_size).prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
-train_iter = iter(tf_train_data)
+train_iter    = iter(tf_train_data)
+tf_test_data  = tf_test_data.repeat().shuffle(30).batch(batch_size).prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
+test_iter     = iter(tf_test_data)
 
 # ==================================================================================
 # DSRNetwork
@@ -170,31 +205,7 @@ def train_step_3(input_images, guiding_sal, step=0):
     return loss
 
 # ==================================================================================
-# get testing image
-# generate random integer values
-from random import seed
-from random import randint
-# seed random number generator
-seed(1)
-testOriImg = glob.glob("SAM_dataset/testDataset/ori_img/*") #768,576 512,392
-testGuidingSal = "SAM_dataset/testDataset/guiding_sal/"
-test_showcase = []
-for index,test in enumerate(testOriImg):
-    ori_img = cv2.imread(test)
-    ori_size = (ori_img.shape[1],ori_img.shape[0])
-    ori_img = cv2.cvtColor(ori_img, cv2.COLOR_BGR2RGB)/255.
-    ori_img = cv2.resize(ori_img,(256,192))
-    ori_img = np.expand_dims(ori_img,0)
-    name = test.split("/")[-1].split('\\')[-1]
-    guiding_sal = cv2.imread(testGuidingSal+name)
-    # guiding_sal = cv2.cvtColor(guiding_sal, cv2.COLOR_BGR2GRAY)/255.
-    guiding_sal = cv2.resize(guiding_sal,(256,192))/255.
-    # guiding_sal = np.expand_dims(guiding_sal,2)
-    guiding_sal = np.expand_dims(guiding_sal,0)
-    test_showcase.append([ori_img,guiding_sal])
 # begin training
-
-# ==================================================================================
 with writer.as_default():
     for i in tqdm(range(epochs)):
         input_images, guiding_sal = next(train_iter)
@@ -213,13 +224,13 @@ with writer.as_default():
         ckpt.step.assign_add(1)
         if (i+1) % eval_rate == 0:
             print('Writing example images...')
-            input_images, guiding_sal = next(train_iter)
+            input_images, guiding_sal = next(test_iter)
             # print(input_images.shape)
             # print(guiding_sal.shape)
-            random_num = randint(0,50)
-            print(test_showcase[random_num][0].shape)
-            print(test_showcase[random_num][1].shape)
-            input_images,guiding_sal = test_showcase[random_num][0],test_showcase[random_num][1]
+            # random_num = randint(0,50)
+            # print(test_showcase[random_num][0].shape)
+            # print(test_showcase[random_num][1].shape)
+            # input_images,guiding_sal = test_showcase[random_num][0],test_showcase[random_num][1]
             outputs = model(input_images, guiding_sal)
             with tf.name_scope("Inputs") as scope:
                 tf.summary.image("Input Images", input_images, step=i)
