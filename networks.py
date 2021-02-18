@@ -29,7 +29,7 @@ class DSRNetwork(tf.keras.Model):
         vggY = self.extractor(c_true)
         loss = [self.mse(x,y) for x,y in zip(vggX,vggY)]
         loss = tf.math.add_n(loss)
-        return loss / 3.
+        return loss / 5.
 
     @tf.function
     def saliency(self, saliency_pred, guiding_sal):
