@@ -1,10 +1,12 @@
 ## Aesthetic Driven Saliency Retargeting and Color Enhancement Network
 
-<pre>Some brief description about the project. Implemented in Tensorflow.</pre>
+This work aims to perform saliency retargeting on an image when given a reference saliency map, while also simultaneously enhancing the colors in an aesthetics-driven manner.
 
+![](figures/example.png)
+#
 ### This repo contains the following files
 | Files                                     | Description | 
-| ------                                    | ------                                             | 
+| :-----                                    | :-----                                             | 
 | color_convert&#46;py                      | Contains operations for changing colorspaces       | 
 | custom_layers&#46;py                      | Contains custom-written layers and operations      |  
 | helper&#46;py                             | Contains functions to build feature extractors     | 
@@ -36,7 +38,7 @@ To start or resume the training process with supported flags:
 $ python train.py --epochs=1000 --batch_size=2
 ```
 | Supported Flags | Description | Default Value |
-| ------          | ------                                        | :------: |
+| :-----          | :-----                                        | :------: |
 | --epochs        | number of total epoches                       | 1000     |  
 | --batch_size    | number of samples in one batch                | 2        |    
 | --patch_size    | image resolution during training              | None     |  
