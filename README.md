@@ -41,12 +41,13 @@ $ python train.py --epochs=1000 --batch_size=2
 ```
 | Supported Flags | Description | Default Value |
 | :-----          | :-----                                        | :------: |
-| --epochs        | number of total epoches                       | 1000     |  
-| --batch_size    | number of samples in one batch                | 2        |    
+| --epochs        | number of total epoches                       | 70       |  
+| --steps         | number of total steps                         | 1000     | 
+| --batch_size    | number of samples in one batch                | 3        |    
 | --patch_size    | image resolution during training              | None     |  
 | --lr_gen        | initial learning rate for generator           | 1e-4     | 
 | --lr_disc       | initial learning rate for discriminator       | 1e-4     | 
-| --eval_rate     | rate for evaluating and saving checkpoints    | 100      |  
+| --eval_rate     | rate for evaluating and saving checkpoints    | 200      |  
 #
 ### Visualizing training process with Tensorboard
 Type the command below in another terminal once you've started the training process:
