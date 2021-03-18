@@ -1,6 +1,9 @@
 ## Aesthetic Driven Saliency Retargeting and Color Enhancement Network
 
-This work aims to perform saliency retargeting on an image when given a reference saliency map, while also simultaneously enhancing the colors in an aesthetics-driven manner.
+Saliency retargeting refers to technique to alter focus in an image to guide a viewer’s attention. We are here to propose a saliency retargeting (attention retargeting) approach using deep learning that will take in an image together with a guiding saliency map and manipulate the input image according to the guiding saliency map. We will be employing a saliency estimator in guiding where the salient region should be, and several loss functions are used to train the model towards the result that we desired. GAN (Generative adversarial network) is utilized to make the output image looks realistic and to enhance the image aesthetic quality by using the idea of unpaired image enhancement.
+
+![image](https://user-images.githubusercontent.com/31039630/111572624-ee48b380-87e3-11eb-921b-472241d7fb91.png)
+
 
 ![](figures/output_1.png)
 ![](figures/output_2.png)
