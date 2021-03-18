@@ -1,4 +1,6 @@
 import tensorflow as tf
+import tensorflow_addons as tfa
+
 from custom_layers import ReflectionPadding2D, ResizeLayer, SqueezeExciteBlock
 
 
@@ -6,8 +8,8 @@ class DSR_Base(tf.keras.Model):
     def __init__(self, **kwargs):
         super(DSR_Base, self).__init__(**kwargs)
 
-        # Encoder
-        self.conv1_1   = tf.keras.layers.Conv2D(64, (3,3), padding='same', activation='relu', kernel_initializer='he_normal')
+        # Encoder)
+        self.conv1_1   = tf.keras.layers.Conv2D(64, (3,3), padding='same', activation='relu', kernel_initializer='he_normal',input_shape=[192,256,4])
         self.conv1_bn1 = tf.keras.layers.BatchNormalization()
         self.conv1_2   = tf.keras.layers.Conv2D(64, (3,3), padding='same', activation='relu', kernel_initializer='he_normal')
         self.conv1_bn2 = tf.keras.layers.BatchNormalization()
@@ -117,13 +119,13 @@ class DSR_Base(tf.keras.Model):
 
         # BottleNeck
         bt1 = self.diconv1(mp4)
-        bt1 = self.diconv1_bn1(bt1)
+        bt1 = self.diconv1_bn1(bt1,training=training)
         bt2 = self.diconv2(mp4)
-        bt2 = self.diconv2_bn1(bt2)
+        bt2 = self.diconv2_bn1(bt2,training=training)
         bt3 = self.diconv3(mp4)
-        bt3 = self.diconv3_bn1(bt3)
+        bt3 = self.diconv3_bn1(bt3,training=training)
         bt4 = self.diconv4(mp4)
-        bt4 = self.diconv4_bn1(bt4)
+        bt4 = self.diconv4_bn1(bt4,training=training)
         btc = self.diconcat([bt1,bt2,bt3,bt4])
 
         # Decoder
@@ -418,22 +420,78 @@ class Discriminator(tf.keras.Model):
     def call(self, inputs, training=False, **kwargs):
         x = self.conv1(inputs)
         x = self.conv1_lr(x)
-        x = self.conv1_bn(x)
+        x = self.conv1_bn(x,training=training)
         x = self.conv1_mp(x)
 
         x = self.conv2(x)
         x = self.conv2_lr(x)
-        x = self.conv2_bn(x)
+        x = self.conv2_bn(x,training=training)
         x = self.conv2_mp(x)
 
         x = self.conv3(x)
         x = self.conv3_lr(x)
-        x = self.conv3_bn(x)
+        x = self.conv3_bn(x,training=training)
         x = self.conv3_mp(x)
 
         x = self.conv4(x)
         x = self.conv4_lr(x)
-        x = self.conv4_bn(x)
+        x = self.conv4_bn(x,training=training)
+        x = self.conv4_mp(x)
+
+        x = self.flatten(x)
+        x = self.dense1(x)
+        x = self.dense2(x)
+        outputs = self.outputs(x)
+        return outputs
+
+class Discriminator_wgan(tf.keras.Model):
+    def __init__(self, **kwargs):
+        super(Discriminator_wgan, self).__init__(**kwargs)
+
+        self.conv1    = tf.keras.layers.Conv2D(32, (3,3), padding='same', input_shape=[192,256,3])
+        self.conv1_lr = tf.keras.layers.LeakyReLU(0.2)
+        self.conv1_bn = tf.keras.layers.BatchNormalization()
+        self.conv1_mp = tf.keras.layers.MaxPooling2D(pool_size=(2,2))
+
+        self.conv2    = tf.keras.layers.Conv2D(64, (3,3), padding='same')
+        self.conv2_lr = tf.keras.layers.LeakyReLU(0.2)
+        self.conv2_bn = tf.keras.layers.BatchNormalization()
+        self.conv2_mp = tf.keras.layers.MaxPooling2D(pool_size=(2,2))
+
+        self.conv3    = tf.keras.layers.Conv2D(64, (3,3), padding='same')
+        self.conv3_lr = tf.keras.layers.LeakyReLU(0.2)
+        self.conv3_bn = tf.keras.layers.BatchNormalization()
+        self.conv3_mp = tf.keras.layers.MaxPooling2D(pool_size=(2,2))
+
+        self.conv4    = tf.keras.layers.Conv2D(64, (3,3), padding='same')
+        self.conv4_lr = tf.keras.layers.LeakyReLU(0.2)
+        self.conv4_bn = tf.keras.layers.BatchNormalization()
+        self.conv4_mp = tf.keras.layers.MaxPooling2D(pool_size=(2,2))
+
+        self.flatten  = tf.keras.layers.Flatten()
+        self.dense1  = tf.keras.layers.Dense(100)
+        self.dense2  = tf.keras.layers.Dense(2)
+        self.outputs = tf.keras.layers.Dense(1)
+
+    def call(self, inputs, training=False, **kwargs):
+        x = self.conv1(inputs)
+        x = self.conv1_lr(x)
+        x = self.conv1_bn(x,training=training)
+        x = self.conv1_mp(x)
+
+        x = self.conv2(x)
+        x = self.conv2_lr(x)
+        x = self.conv2_bn(x,training=training)
+        x = self.conv2_mp(x)
+
+        x = self.conv3(x)
+        x = self.conv3_lr(x)
+        x = self.conv3_bn(x,training=training)
+        x = self.conv3_mp(x)
+
+        x = self.conv4(x)
+        x = self.conv4_lr(x)
+        x = self.conv4_bn(x,training=training)
         x = self.conv4_mp(x)
 
         x = self.flatten(x)

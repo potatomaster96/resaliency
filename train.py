@@ -56,17 +56,17 @@ ckpt_dir           = args.ckpt_dir
 # weights parameters
 loss_weights = {
     "gen_adv"       : 1.0, # 0.5
-    "perceptual"    : 1.0, # 5.0
-    "saliency"      : 1.0, # 2.0
+    "perceptual"    : 50.0, # 5.0
+    "saliency"      : 5.0, # 2.0
     "hue"           : 0.0, # 5.0
-    "aesthetics"    : 2.0,
+    "gp_weight"    : 10.0,
     "discriminator" : 1.0
 }
 
 # ======================================
 # Prepare images
 train_sr_data      = glob.glob('SAM_dataset/img_resize/*')
-train_saliency_map = glob.glob('SAM_dataset/guide_sal/*')
+train_saliency_map = glob.glob('SAM_dataset/resize_binary_img/*')
 real_image         = glob.glob('SAM_dataset/resize_beauty/train/*')
 test_sr_data       = "SAM_dataset/testDataset/ori_img" #768,576 512,392
 test_saliency_map  = "SAM_dataset/testDataset/guiding_sal"
