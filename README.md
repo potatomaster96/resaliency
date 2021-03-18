@@ -2,7 +2,8 @@
 
 This work aims to perform saliency retargeting on an image when given a reference saliency map, while also simultaneously enhancing the colors in an aesthetics-driven manner.
 
-![](figures/example.png)
+![](figures/output_1.png)
+![](figures/output_2.png)
 #
 ### This repo contains the following files
 | Files                                     | Description | 
