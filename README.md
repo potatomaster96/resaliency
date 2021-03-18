@@ -5,7 +5,7 @@ Saliency retargeting refers to technique to alter focus in an image to guide a v
 ![](figures/output_1.png)
 ![](figures/output_2.png)
 ## Overview
-![](figures/network_architecture.png)
+![](figures/network_architecture.jpg)
 ### This repo contains the following files
 | Files                                     | Description | 
 | :-----                                    | :-----                                             | 
