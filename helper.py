@@ -22,22 +22,14 @@ def build_vgg_extractor():
     lossModel.trainable = False
     return lossModel
 
-
 def frequency_saliency_detection(oriImg):
-    blur = _gaussian_kernel(21, 5, 1, "float32")
     output_list = []
     temp = rgb_to_lab(oriImg)
-    l = tf.expand_dims(temp[:,:,:,0], axis=-1)
-    a = tf.expand_dims(temp[:,:,:,1], axis=-1)
-    b = tf.expand_dims(temp[:,:,:,2], axis=-1)
-    l = l/100
-    a = (a + 86.185) / 184.439
-    b = (b + 107.863) / 202.345
-    labImg = tf.concat([l,a,b],axis=-1)
-    index = 0
-
-    for i in range(labImg.shape[0]):
-        img = labImg[0]
+    l = temp[:,:,:,0]/255
+    a = temp[:,:,:,1]/255
+    b = temp[:,:,:,2]/255
+    labImg = tf.stack([l,a,b],3)
+    for index,img in enumerate(labImg):
         l = img[:,:,0]; lm = K.mean(l);
         a = img[:,:,1]; am = K.mean(a);
         b = img[:,:,2]; bm = K.mean(b);
@@ -45,14 +37,7 @@ def frequency_saliency_detection(oriImg):
         new_a = (a-am)**2
         new_b = (b-bm)**2
         sm = (new_l+new_a+new_b)
-        sm = tf.clip_by_value(sm,0,1)
-        thresholdVal = (2/(sm.shape[0]*sm.shape[1])) * K.sum(sm)
-        safe_exp = tf.where(sm <= thresholdVal, 1.0, sm)
-        sm = tf.where(sm<=thresholdVal, 0., safe_exp)
         sm = tf.expand_dims(sm,0)
         sm = tf.expand_dims(sm,3)
-        blurred = tf.nn.depthwise_conv2d(tf.cast(sm,"float32"), blur, [1,1,1,1], 'SAME')
-        blurred = tf.clip_by_value(blurred,0,1)
-        index += 1
-        output_list.append(blurred)
-    return tf.concat(output_list, axis=0)
+        output_list.append(sm[0])
+    return tf.stack(output_list)

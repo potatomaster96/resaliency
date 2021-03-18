@@ -8,8 +8,8 @@ class DSRNetwork(tf.keras.Model):
         super(DSRNetwork, self).__init__(**kwargs)
         self.loss_weights = self.build_weights(loss_weights)
         self.generator = DSR_Base()
-        self.discriminator = Discriminator()
-        # self.discriminator = Discriminator_wgan()
+#         self.discriminator = Discriminator()
+        self.discriminator = Discriminator_wgan()
         self.nima = build_nima_model()
         self.extractor = build_vgg_extractor()
         self.bce = tf.keras.losses.BinaryCrossentropy()
@@ -122,6 +122,7 @@ class DSRNetwork(tf.keras.Model):
         return fake_loss - real_loss
 
     def call(self, inputs, guiding_sal, **kwargs):
+        guiding_sal = tf.image.rgb_to_grayscale(guiding_sal)
         concated_inputs = tf.concat([inputs, guiding_sal], axis=-1)
         outputs = self.generator(concated_inputs)
         outputs = tf.clip_by_value(outputs, 0., 1.)
@@ -137,13 +138,13 @@ class DSRNetwork(tf.keras.Model):
         real = self.discriminator(inputs,training=True)
         fake = self.discriminator(retargetted,training=True)
 
-        disc_loss = tf.reduce_mean(fake**2) + tf.reduce_mean((real-1)**2)
-        # gp = self.gradient_penalty(inputs.shape[0],inputs,retargetted)
-        # disc_loss = self.discriminator_loss(real,fake) + gp*self.loss_weights['gp_weight']
+        #         disc_loss = tf.reduce_mean(fake**2) + tf.reduce_mean((real-1)**2)
+        gp = self.gradient_penalty(inputs.shape[0],inputs,retargetted)
+        disc_loss = self.discriminator_loss(real,fake) + gp*self.loss_weights['gp_weight']
         discriminator_loss = disc_loss * self.loss_weights["discriminator"]
 
-        generator_loss  = tf.reduce_mean((fake-1)**2) * self.loss_weights["gen_adv"]
-        # generator_loss  = -tf.reduce_mean(fake) * self.loss_weights["gen_adv"]
+        #         generator_loss  = tf.reduce_mean((fake-1)**2) * self.loss_weights["gen_adv"]
+        generator_loss  = -tf.reduce_mean(fake) * self.loss_weights["gen_adv"]
         perceptual_loss = self.ssim_loss(inputs, retargetted) * self.loss_weights["perceptual"]
         saliency_loss   = self.saliency(saliency_pred, guiding_sal) * self.loss_weights["saliency"]
         hue_loss        = self.hue(inputs, retargetted, guiding_sal) * self.loss_weights["hue"]
