@@ -16,12 +16,12 @@ from networks import DSRNetwork
 
 parser = argparse.ArgumentParser(description='')
 parser.add_argument('--epochs',     dest='epochs',     type=int,   default=1000, help='number of total epoches')
-parser.add_argument('--batch_size', dest='batch_size', type=int,   default=2,    help='number of samples in one batch')
+parser.add_argument('--batch_size', dest='batch_size', type=int,   default=3,    help='number of samples in one batch')
 parser.add_argument('--patch_size', dest='patch_size', type=int,   default=None, help='image resolution during training')
 parser.add_argument('--lr',         dest='lr',         type=float, default=1e-4, help='initial learning rate')
 parser.add_argument('--lr_gen',     dest='lr_gen',     type=float, default=1e-4, help='initial learning rate for generator')
 parser.add_argument('--lr_disc',    dest='lr_disc',    type=float, default=1e-4, help='initial learning rate for discriminator')
-parser.add_argument('--eval_rate',  dest='eval_rate', default=100,  help='evaluating and saving checkpoints every # epoch')
+parser.add_argument('--eval_rate',  dest='eval_rate', default=200,  help='evaluating and saving checkpoints every # epoch')
 parser.add_argument('--ckpt_dir',   dest='ckpt_dir', default='checkpoints', help='directory for checkpoints')
 args = parser.parse_args()
 
@@ -30,7 +30,7 @@ args = parser.parse_args()
 my_devices = tf.config.experimental.list_physical_devices(device_type='GPU')
 print("Available GPU Devices:", len(my_devices))
 if len(my_devices) != 0:
-    gpu = my_devices[-1] # default to last gpu
+    gpu = my_devices[0] # default to last gpu
     tf.config.experimental.set_visible_devices(devices=gpu, device_type='GPU')
     tf.config.experimental.set_memory_growth(gpu, True)
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
@@ -56,20 +56,20 @@ ckpt_dir           = args.ckpt_dir
 # weights parameters
 loss_weights = {
     "gen_adv"       : 1.0, # 0.5
-    "perceptual"    : 1.0, # 5.0
-    "saliency"      : 1.0, # 2.0
+    "perceptual"    : 50.0, # 5.0
+    "saliency"      : 5.0, # 2.0
     "hue"           : 0.0, # 5.0
-    "aesthetics"    : 2.0,
+    "gp_weight"    : 10.0,
     "discriminator" : 1.0
 }
 
 # ======================================
 # Prepare images
 train_sr_data      = glob.glob('SAM_dataset/img_resize/*')
-train_saliency_map = glob.glob('SAM_dataset/guide_sal/*')
+train_saliency_map = glob.glob('SAM_dataset/resize_binary_img/*')
 real_image         = glob.glob('SAM_dataset/resize_beauty/train/*')
 test_sr_data       = "SAM_dataset/testDataset/ori_img" #768,576 512,392
-test_saliency_map  = "SAM_dataset/testDataset/guiding_sal"
+test_saliency_map  = "SAM_dataset/testDataset/guiding_sal_noFeather"
 ori_sal_path       = 'SAM_dataset/ori_sal/*'
 checkpoint_dir     = "checkpoints/"
 train_sr_data.sort()
@@ -108,8 +108,8 @@ matches = list(set(testOriImg) & set(testGuidingSal))
 
 # ==================================================================================
 # Selecting images for training and testing
-train_src = train_sr_data[:4000]
-train_ref = train_saliency_map[:4000]
+train_src = train_sr_data[:3000]
+train_ref = train_saliency_map[:3000]
 test_src  = ["%s/%s.jpg"%(test_sr_data, path) for path in matches]
 test_ref  = ["%s/%s.jpg"%(test_saliency_map, path) for path in matches]
 
@@ -117,8 +117,8 @@ test_ref  = ["%s/%s.jpg"%(test_saliency_map, path) for path in matches]
 print("Loading training images")
 training_src = [read_image(img_path, patch_size) for img_path in tqdm(train_src)]
 training_ref = [read_image(img_path, patch_size) for img_path in tqdm(train_ref)]
-testing_src  = [read_image(img_path, (256,192)) for img_path in tqdm(test_src)]
-testing_ref  = [read_image(img_path, (256,192)) for img_path in tqdm(test_ref)]
+testing_src  = [read_image(img_path, (192,256)) for img_path in tqdm(test_src)]
+testing_ref  = [read_image(img_path, (192,256)) for img_path in tqdm(test_ref)]
 
 # convert image lists to numpy arrays
 training_src = np.asarray(training_src)
@@ -178,10 +178,10 @@ def train_step_1(input_images, guiding_sal, step=0):
         loss = model.train_batch(input_images, guiding_sal)
     gen_trainables = model.get_gen_trainables()
     disc_trainables = model.get_disc_trainables()
-    if (step+1)%2 == 0:
+    if (step+1)%5 == 0:
         dsr_gradients = dsr_tape.gradient(loss[:-1], gen_trainables)
         optimizer_gen.apply_gradients(zip(dsr_gradients, gen_trainables))
-    if (step+1)%2 != 0:
+    else:
         disc_gradients = disc_tape.gradient(loss[-1], disc_trainables)
         optimizer_disc.apply_gradients(zip(disc_gradients, disc_trainables))
     return loss
@@ -209,14 +209,13 @@ def train_step_3(input_images, guiding_sal, step=0):
 with writer.as_default():
     for i in tqdm(range(epochs)):
         input_images, guiding_sal = next(train_iter)
-        g_loss, p_loss, s_loss, h_loss, a_loss, d_loss = train_step_1(input_images, guiding_sal, i)
-        dsr_loss = g_loss + p_loss + s_loss + h_loss + a_loss
+        g_loss, p_loss, s_loss, h_loss, d_loss = train_step_1(input_images, guiding_sal, i)
+        dsr_loss = g_loss + p_loss + s_loss + h_loss 
         with tf.name_scope("Generator") as scope:
             tf.summary.scalar("Gen Adversarial Loss", g_loss, step=i)
             tf.summary.scalar("Perceptual Loss", p_loss, step=i)
             tf.summary.scalar("Saliency Loss", s_loss, step=i)
             tf.summary.scalar("Hue Loss", h_loss, step=i)
-            tf.summary.scalar("Aesthetics Loss", a_loss, step=i)
             tf.summary.scalar("Generator Loss", dsr_loss, step=i)
         with tf.name_scope("Discriminator") as scope:
             tf.summary.scalar("Discriminator Loss", d_loss, step=i)
@@ -225,12 +224,6 @@ with writer.as_default():
         if (i+1) % eval_rate == 0:
             print('Writing example images...')
             input_images, guiding_sal = next(test_iter)
-            # print(input_images.shape)
-            # print(guiding_sal.shape)
-            # random_num = randint(0,50)
-            # print(test_showcase[random_num][0].shape)
-            # print(test_showcase[random_num][1].shape)
-            # input_images,guiding_sal = test_showcase[random_num][0],test_showcase[random_num][1]
             outputs = model(input_images, guiding_sal)
             with tf.name_scope("Inputs") as scope:
                 tf.summary.image("Input Images", input_images, step=i)

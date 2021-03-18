@@ -1,9 +1,11 @@
 ## Aesthetic Driven Saliency Retargeting and Color Enhancement Network
 
-This work aims to perform saliency retargeting on an image when given a reference saliency map, while also simultaneously enhancing the colors in an aesthetics-driven manner.
+Saliency retargeting refers to technique to alter focus in an image to guide a viewer’s attention. We are here to propose a saliency retargeting (attention retargeting) approach using deep learning that will take in an image together with a guiding saliency map and manipulate the input image according to the guiding saliency map. We will be employing a saliency estimator in guiding where the salient region should be, and several loss functions are used to train the model towards the result that we desired. GAN (Generative adversarial network) is utilized to make the output image looks realistic and to enhance the image aesthetic quality by using the idea of unpaired image enhancement.
 
-![](figures/example.png)
-#
+![](figures/output_1.png)
+![](figures/output_2.png)
+## Overview
+![](figures/network_architecture.jpg)
 ### This repo contains the following files
 | Files                                     | Description | 
 | :-----                                    | :-----                                             | 
@@ -39,12 +41,13 @@ $ python train.py --epochs=1000 --batch_size=2
 ```
 | Supported Flags | Description | Default Value |
 | :-----          | :-----                                        | :------: |
-| --epochs        | number of total epoches                       | 1000     |  
-| --batch_size    | number of samples in one batch                | 2        |    
+| --epochs        | number of total epoches                       | 70       |  
+| --steps         | number of total steps                         | 1000     | 
+| --batch_size    | number of samples in one batch                | 3        |    
 | --patch_size    | image resolution during training              | None     |  
 | --lr_gen        | initial learning rate for generator           | 1e-4     | 
 | --lr_disc       | initial learning rate for discriminator       | 1e-4     | 
-| --eval_rate     | rate for evaluating and saving checkpoints    | 100      |  
+| --eval_rate     | rate for evaluating and saving checkpoints    | 200      |  
 #
 ### Visualizing training process with Tensorboard
 Type the command below in another terminal once you've started the training process:
